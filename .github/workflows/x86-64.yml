@@ -272,12 +272,20 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         
-    - name: Telegram notification
-      uses: appleboy/telegram-action@master
-      with:
-        to: ${{ secrets.TELEGRAM_TO }}
-        token: ${{ secrets.TELEGRAM_TOKEN }}
-        message: |
-          编译时间：${{ env.DATE }}
-          lede更新信息：${{ env.useVersionInfo }}
-          ${{ env.PRODUCT_NAME }}编译完成        
+#    - name: Telegram notification
+#      uses: appleboy/telegram-action@master
+#      with:
+#        to: ${{ secrets.TELEGRAM_TO }}
+#        token: ${{ secrets.TELEGRAM_TOKEN }}
+#        message: |
+#          编译时间：${{ env.DATE }}
+#          lede更新信息：${{ env.useVersionInfo }}
+#          ${{ env.PRODUCT_NAME }}编译完成        
+    - name: Upload firmware to WeTransfer
+      id: wetransfer
+      if: steps.organize.outputs.status == 'success' && env.UPLOAD_WETRANSFER == 'true' && !cancelled()
+      run: |
+        curl -fsSL git.io/file-transfer | sh
+        ./transfer wet -s -p 16 --no-progress ${{ env.FIRMWARE }}/* 2>&1 | tee wetransfer.log
+        echo "::warning file=wetransfer.com::$(cat wetransfer.log | grep https)"
+        echo "::set-output name=url::$(cat wetransfer.log | grep https | cut -f3 -d" ")"
